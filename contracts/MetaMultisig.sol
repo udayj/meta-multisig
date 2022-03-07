@@ -2,6 +2,8 @@
 pragma solidity ^0.8.7;
 
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract MetaMultisig {
 
 
@@ -64,6 +66,42 @@ contract MetaMultisig {
         addr.transfer(amount);
 
 
+
+    }
+
+    function sendWithSignERC20(
+        bytes[] calldata signatures, 
+        address[] calldata addresses, 
+        address payable addr, 
+        uint amount, 
+        uint _nonce,
+        address tokenAddress)
+        external
+        onlyOwner(msg.sender) {
+
+        
+        require(_nonce==nonce,"Nonce invalid");
+        nonce++;
+        require(amount<=IERC20(tokenAddress).balanceOf(address(this)),"Insufficient balance");
+
+
+        uint numSig=0;
+        for(uint i=0;i<signatures.length;i++) {
+
+            require(owners[addresses[i]],"Address is not an owner");
+            
+            bytes32 msgHash = keccak256(abi.encode(addr,amount,_nonce,address(this),tokenAddress));
+            bytes32 message = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
+            /*console.log("Checking signatures");
+            console.logBytes(abi.encode(addr,amount,nonce,address(this)));
+            console.logBytes32(msgHash);
+            console.logBytes32(message);*/
+            require(recoverSigner(message,signatures[i])==addresses[i],"Invalid signature");
+            numSig++;
+
+        }
+        require(numSig>=numSigRequired,"Not enough signatures");
+        IERC20(tokenAddress).transfer(addr,amount);
 
     }
 
