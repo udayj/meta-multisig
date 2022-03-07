@@ -1,6 +1,7 @@
 //SPDX-License-Identifier:MIT
 pragma solidity ^0.8.7;
 
+import "hardhat/console.sol";
 contract MetaMultisig {
 
 
@@ -10,6 +11,7 @@ contract MetaMultisig {
     uint public nonce;
     constructor(uint _numSigRequired) {
 
+        require(_numSigRequired > 0, "Num sig needs to be atleast 1");
         owners[msg.sender]=true;
         numOwners++;
         numSigRequired=_numSigRequired;
@@ -47,10 +49,14 @@ contract MetaMultisig {
         for(uint i=0;i<len;i++) {
 
             require(owners[addresses[i]],"Address is not an owner");
-            bytes32 msgHash = keccak256(abi.encodePacked(addr,amount,nonce,address(this)));
+            
+            bytes32 msgHash = keccak256(abi.encode(addr,amount,_nonce,address(this)));
             bytes32 message = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
-
-            require(recoverSigner(message,signatures[i])==addresses[i]);
+            /*console.log("Checking signatures");
+            console.logBytes(abi.encode(addr,amount,nonce,address(this)));
+            console.logBytes32(msgHash);
+            console.logBytes32(message);*/
+            require(recoverSigner(message,signatures[i])==addresses[i],"Invalid signature");
             numSig++;
 
         }
